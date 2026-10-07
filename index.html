@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rhema Mobile Technologies | POS</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17251f;
+      --muted: #718078;
+      --line: #e4e9e5;
+      --paper: #f5f7f4;
+      --white: #fff;
+      --green: #176b4b;
+      --green-dark: #104b36;
+      --lime: #d9f36a;
+      --mint: #e8f3ed;
+      --amber: #f5b84a;
+      --red: #b74b3b;
+      --shadow: 0 8px 25px rgba(22, 41, 31, .06);
+      font-family: "Bahnschrift", "Trebuchet MS", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; background: var(--paper); color: var(--ink); }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .shell { min-height: 100vh; display: grid; grid-template-columns: 238px minmax(0, 1fr); }
+    aside { background: var(--green-dark); color: #f5f8f4; padding: 24px 16px; display: flex; flex-direction: column; gap: 28px; }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 0 8px; }
+    .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; color: var(--green-dark); background: var(--lime); border-radius: 10px; font-weight: 900; font-size: 17px; }
+    .brand-name { font-weight: 800; font-size: 16px; letter-spacing: .2px; }
+    .brand-sub { display: block; color: #b3c9bd; font-size: 11px; margin-top: 2px; }
+    .nav-label { color: #9fb7aa; font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; padding: 0 12px; margin: 0 0 8px; }
+    nav { display: grid; gap: 5px; }
+    .nav-btn { border: 0; width: 100%; text-align: left; color: #d6e2da; background: transparent; padding: 11px 12px; border-radius: 7px; display: flex; align-items: center; gap: 11px; font-size: 13px; font-weight: 650; }
+    .nav-btn:hover { background: rgba(255,255,255,.08); }
+    .nav-btn.active { color: var(--green-dark); background: var(--lime); }
+    .nav-icon { width: 19px; text-align: center; font-size: 15px; }
+    .aside-note { margin-top: auto; padding: 13px 12px; border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: #b8cbc0; font-size: 11px; line-height: 1.5; }
+    .aside-note strong { display: block; color: #f5f8f4; font-size: 12px; margin-bottom: 3px; }
+    main { min-width: 0; }
+    .topbar { height: 66px; background: var(--white); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; }
+    .crumb { font-size: 12px; color: var(--muted); }
+    .top-actions { display: flex; align-items: center; gap: 12px; }
+    .status { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #43a475; }
+    .avatar { height: 32px; width: 32px; display: grid; place-items: center; color: var(--green-dark); background: var(--mint); border-radius: 50%; font-size: 11px; font-weight: 800; }
+    .content { max-width: 1480px; padding: 29px 30px 40px; margin: 0 auto; }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 15px; margin-bottom: 23px; }
+    .head-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    h1 { margin: 0; font-size: 25px; line-height: 1.2; letter-spacing: 0; }
+    .subtitle { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+    .eyebrow { text-transform: uppercase; font-size: 10px; font-weight: 800; letter-spacing: 1px; color: var(--green); margin-bottom: 7px; }
+    .btn { border: 1px solid var(--line); background: white; color: var(--ink); min-height: 36px; border-radius: 6px; padding: 0 13px; font-weight: 700; font-size: 12px; }
+    .btn:hover { border-color: #aab9b0; }
+    .btn.primary { color: white; border-color: var(--green); background: var(--green); }
+    .btn.primary:hover { background: var(--green-dark); }
+    .btn.dark { color: white; background: var(--ink); border-color: var(--ink); }
+    .btn.small { min-height: 29px; padding: 0 10px; font-size: 11px; }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 18px; }
+    .metric { background: white; border: 1px solid var(--line); border-radius: 8px; padding: 16px; min-height: 106px; }
+    .metric-label { color: var(--muted); font-size: 11px; font-weight: 700; }
+    .metric-value { font-size: 24px; font-weight: 800; margin-top: 13px; }
+    .metric-foot { color: var(--muted); font-size: 10px; margin-top: 3px; }
+    .dashboard-grid { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(260px,.85fr); gap: 14px; }
+    .panel { background: white; border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+    .panel-head { min-height: 52px; padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .panel-title { font-size: 13px; font-weight: 800; }
+    .panel-body { padding: 15px 16px; }
+    .table-wrap { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; font-size: 11px; }
+    th { color: var(--muted); text-align: left; font-size: 10px; font-weight: 750; padding: 9px 10px; white-space: nowrap; }
+    td { padding: 11px 10px; border-top: 1px solid #edf0ed; white-space: nowrap; }
+    .product-name { font-weight: 750; }
+    .subcell { color: var(--muted); font-size: 10px; margin-top: 3px; }
+    .tag { display: inline-flex; align-items: center; padding: 4px 7px; border-radius: 4px; font-size: 10px; font-weight: 750; background: var(--mint); color: var(--green-dark); }
+    .tag.warn { background: #fff1d7; color: #81540a; }
+    .tag.repair { background: #e8edf7; color: #344f81; }
+    .quick-links { display: grid; gap: 8px; }
+    .quick-link { background: #f7f9f6; border: 1px solid var(--line); border-radius: 6px; padding: 12px; text-align: left; }
+    .quick-link:hover { border-color: #a5b9ad; background: #f0f6f1; }
+    .quick-link strong { display: block; font-size: 12px; }
+    .quick-link span { display: block; color: var(--muted); font-size: 10px; margin-top: 4px; }
+    .screen { display: none; animation: rise .18s ease-out; }
+    .screen.active { display: block; }
+    @keyframes rise { from { opacity: .55; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .pos-layout { display: grid; grid-template-columns: minmax(0,1.45fr) minmax(300px,.8fr); gap: 15px; align-items: start; }
+    .toolbar { display: flex; gap: 9px; align-items: center; margin-bottom: 12px; }
+    .field { border: 1px solid #dce4de; background: white; border-radius: 6px; color: var(--ink); min-height: 37px; padding: 0 11px; font-size: 12px; outline: none; }
+    .field:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(23,107,75,.1); }
+    .search { width: 100%; }
+    .segmented { display: flex; gap: 3px; padding: 3px; background: #eaf0eb; border-radius: 7px; flex-shrink: 0; }
+    .segmented button { border: 0; background: transparent; color: #627169; padding: 7px 10px; font-size: 10px; font-weight: 800; border-radius: 5px; white-space: nowrap; }
+    .segmented button.active { color: var(--green-dark); background: white; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .categories { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 13px; padding-bottom: 2px; }
+    .category { border: 1px solid var(--line); background: white; color: #64736b; border-radius: 20px; font-size: 10px; padding: 7px 10px; white-space: nowrap; }
+    .category.active { border-color: var(--green); color: var(--green-dark); background: var(--mint); font-weight: 800; }
+    .product-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
+    .product-card { text-align: left; min-height: 111px; border: 1px solid var(--line); background: white; border-radius: 7px; padding: 11px; display: flex; flex-direction: column; justify-content: space-between; }
+    .product-card:hover { border-color: #6c9c82; box-shadow: 0 3px 12px rgba(22,41,31,.07); }
+    .product-card:disabled { opacity: .45; cursor: not-allowed; }
+    .product-icon { display: grid; place-items: center; height: 29px; width: 29px; border-radius: 7px; background: var(--mint); color: var(--green-dark); font-weight: 800; font-size: 12px; }
+    .product-card:nth-child(3n+2) .product-icon { background: #fff1d7; color: #80570e; }
+    .product-card:nth-child(3n) .product-icon { background: #e8edf7; color: #344f81; }
+    .product-card strong { display: block; font-size: 11px; line-height: 1.35; margin-top: 8px; }
+    .product-bottom { display: flex; justify-content: space-between; align-items: center; gap: 5px; margin-top: 9px; }
+    .product-price { font-size: 12px; font-weight: 850; }
+    .product-stock { color: var(--muted); font-size: 9px; }
+    .cart { position: sticky; top: 12px; }
+    .cart-mode { display: flex; align-items: center; gap: 10px; }
+    .cart-body { padding: 5px 15px; min-height: 150px; max-height: 310px; overflow-y: auto; }
+    .cart-empty { color: var(--muted); text-align: center; padding: 44px 10px; font-size: 12px; }
+    .cart-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; padding: 11px 0; border-bottom: 1px solid #edf0ed; }
+    .cart-row-name { font-size: 11px; font-weight: 750; }
+    .cart-row-price { color: var(--muted); font-size: 10px; margin-top: 4px; }
+    .qty-controls { display: flex; align-items: center; gap: 7px; margin-top: 7px; }
+    .qty-btn { width: 23px; height: 23px; border: 1px solid var(--line); border-radius: 5px; background: white; font-weight: 800; }
+    .qty-val { min-width: 15px; text-align: center; font-size: 11px; }
+    .cart-sum { padding: 12px 15px 15px; border-top: 1px solid var(--line); }
+    .sum-line { display: flex; justify-content: space-between; padding: 5px 0; font-size: 11px; color: var(--muted); }
+    .sum-line.total { padding: 10px 0; color: var(--ink); font-size: 16px; font-weight: 850; }
+    .cart-sum .field { width: 100%; margin: 5px 0 9px; }
+    .cart-sum .btn { width: 100%; min-height: 40px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 11px; }
+    .form-field { display: grid; gap: 6px; }
+    .form-field label { color: #58675f; font-weight: 750; font-size: 10px; }
+    .form-field .field { width: 100%; }
+    .form-field.full { grid-column: 1 / -1; }
+    .filters { display: flex; align-items: center; gap: 8px; }
+    .filters .field { min-width: 150px; }
+    .empty-note { text-align: center; color: var(--muted); padding: 24px; font-size: 12px; }
+    .repair-list { display: grid; gap: 9px; }
+    .repair-card { border: 1px solid var(--line); border-radius: 7px; padding: 13px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px; align-items: center; }
+    .repair-card strong { font-size: 12px; }
+    .repair-card p { color: var(--muted); font-size: 10px; margin: 5px 0 0; }
+    .repair-actions { display: flex; align-items: center; gap: 7px; }
+    .repair-actions select { max-width: 130px; }
+    .notice { position: fixed; right: 22px; bottom: 22px; padding: 12px 15px; background: var(--ink); color: white; border-radius: 6px; font-size: 12px; box-shadow: var(--shadow); opacity: 0; transform: translateY(8px); pointer-events: none; transition: .2s ease; z-index: 10; }
+    .notice.show { opacity: 1; transform: translateY(0); }
+    .modal-backdrop { position: fixed; inset: 0; display: none; place-items: center; padding: 16px; background: rgba(16,32,23,.42); z-index: 5; }
+    .modal-backdrop.open { display: grid; }
+    .modal { width: min(480px,100%); background: white; border-radius: 9px; box-shadow: 0 20px 60px rgba(0,0,0,.18); }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 15px 17px; border-bottom: 1px solid var(--line); }
+    .modal-head strong { font-size: 14px; }
+    .modal-head button { border: 0; background: transparent; color: var(--muted); font-size: 21px; }
+    .modal-content { padding: 16px 17px; }
+    .modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 13px 17px; border-top: 1px solid var(--line); }
+    .print-header { display: none; }
+    @media (max-width: 920px) {
+      .shell { grid-template-columns: 195px minmax(0,1fr); }
+      .content { padding: 23px 20px 32px; }
+      .topbar { padding: 0 20px; }
+      .metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .product-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width: 640px) {
+      .shell { display: block; padding-bottom: 61px; }
+      aside { position: fixed; z-index: 4; inset: auto 0 0; height: 60px; padding: 5px 8px; display: block; }
+      .brand, .nav-label, .aside-note { display: none; }
+      nav { height: 100%; display: grid; grid-template-columns: repeat(4,1fr); gap: 2px; }
+      .nav-btn { height: 50px; padding: 3px 1px; display: flex; flex-direction: column; justify-content: center; gap: 2px; text-align: center; font-size: 9px; border-radius: 6px; }
+      .nav-icon { font-size: 14px; }
+      .topbar { height: 52px; padding: 0 15px; }
+      .status { font-size: 0; }
+      .content { padding: 20px 14px 27px; }
+      .page-head { align-items: flex-start; }
+      .head-actions { flex-wrap: wrap; justify-content: flex-end; }
+      h1 { font-size: 21px; }
+      .metrics { gap: 8px; }
+      .metric { padding: 12px; min-height: 91px; }
+      .metric-value { font-size: 20px; margin-top: 11px; }
+      .pos-layout { grid-template-columns: 1fr; }
+      .cart { position: static; }
+      .cart-body { max-height: 230px; }
+      .toolbar { flex-direction: column; align-items: stretch; }
+      .toolbar .segmented { justify-content: center; }
+      .repair-card { grid-template-columns: 1fr; }
+      .repair-actions { justify-content: space-between; }
+      .filters { width: 100%; }
+      .filters .field { min-width: 0; width: 100%; }
+    }
+    @media print {
+      @page { margin: 12mm; }
+      body { background: #fff; color: #111; }
+      .shell { display: block; min-height: 0; }
+      aside, .topbar, .notice, .modal-backdrop { display: none !important; }
+      .content { max-width: none; margin: 0; padding: 0; }
+      .print-header { display: block; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid #176b4b; }
+      .print-header h1 { font-size: 19px; margin: 0; }
+      .print-header p { color: #555; font-size: 10px; margin: 5px 0 0; }
+      .screen { display: none !important; animation: none !important; }
+      .screen.active { display: block !important; }
+      button, .filters, .quick-links, .repair-actions { display: none !important; }
+      .panel { box-shadow: none; break-inside: avoid; }
+      .table-wrap { overflow: visible; }
+      table { font-size: 9pt; }
+      th, td { padding: 6px; }
+      .metric { min-height: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="brand"><div class="brand-mark">R</div><div><div class="brand-name">Rhema Mobile Technologies</div><span class="brand-sub">Accessories & repair POS</span></div></div>
+      <div>
+        <p class="nav-label">Workspace</p>
+        <nav aria-label="Main navigation">
+          <button class="nav-btn active" data-screen="overview"><span class="nav-icon">&#9638;</span>Overview</button>
+          <button class="nav-btn" data-screen="checkout"><span class="nav-icon">&#9633;</span>Checkout</button>
+          <button class="nav-btn" data-screen="inventory"><span class="nav-icon">&#9776;</span>Inventory</button>
+          <button class="nav-btn" data-screen="repairs"><span class="nav-icon">&#9881;</span>Repairs</button>
+        </nav>
+      </div>
+      <div class="aside-note"><strong>Local workspace</strong>Sales, products and repair tickets are saved in this browser.</div>
+    </aside>
+    <main>
+      <header class="topbar"><div class="crumb">Shop floor <span aria-hidden="true">/</span> <span id="crumbCurrent">Overview</span></div><div class="top-actions"><div class="status"><span class="status-dot"></span> Register ready</div><div class="avatar">OP</div></div></header>
+      <div class="content">
+        <div class="print-header"><h1>Rhema Mobile Technologies</h1><p id="printMeta"></p></div>
+        <section class="screen active" id="screen-overview">
+          <div class="page-head"><div><div class="eyebrow">Wednesday, October 7</div><h1>Good morning, operator</h1><p class="subtitle">Here is what is happening at your counter today.</p></div><div class="head-actions"><button class="btn" data-print="Daily sales report">Print report</button><button class="btn primary" data-go="checkout">New sale</button></div></div>
+          <div class="metrics">
+            <div class="metric"><div class="metric-label">Today's sales</div><div class="metric-value" id="metricSales">KSh 0</div><div class="metric-foot">Completed transactions</div></div>
+            <div class="metric"><div class="metric-label">Items sold today</div><div class="metric-value" id="metricItems">0</div><div class="metric-foot">Across all sales</div></div>
+            <div class="metric"><div class="metric-label">Open repairs</div><div class="metric-value" id="metricRepairs">0</div><div class="metric-foot">Waiting or in progress</div></div>
+            <div class="metric"><div class="metric-label">Low stock</div><div class="metric-value" id="metricLow">0</div><div class="metric-foot">At or below reorder point</div></div>
+          </div>
+          <div class="dashboard-grid">
+            <div class="panel"><div class="panel-head"><span class="panel-title">Sales today</span><button class="btn small" data-go="checkout">Open checkout</button></div><div class="table-wrap"><table><thead><tr><th>RECEIPT</th><th>TIME</th><th>TYPE</th><th>PAYMENT</th><th>TOTAL</th></tr></thead><tbody id="recentSales"></tbody></table></div></div>
+            <div class="panel"><div class="panel-head"><span class="panel-title">Quick actions</span></div><div class="panel-body quick-links"><button class="quick-link" data-go="checkout"><strong>Start a sale</strong><span>Ring up accessories at retail or wholesale pricing.</span></button><button class="quick-link" data-go="repairs"><strong>Check repair jobs</strong><span>Log a device, issue and customer contact.</span></button><button class="quick-link" data-go="inventory"><strong>Review stock</strong><span>See quantities and update the product catalog.</span></button></div></div>
+          </div>
+        </section>
+        <section class="screen" id="screen-checkout">
+          <div class="page-head"><div><div class="eyebrow">Point of sale</div><h1>Checkout</h1><p class="subtitle">Build a basket, choose a customer price, and take payment.</p></div></div>
+          <div class="pos-layout">
+            <div>
+              <div class="toolbar"><input class="field search" id="productSearch" type="search" placeholder="Search products or SKU" aria-label="Search products"><div class="segmented" id="priceMode"><button type="button" class="active" data-mode="retail">Retail</button><button type="button" data-mode="wholesale">Wholesale</button></div></div>
+              <div class="categories" id="categories"></div>
+              <div class="product-grid" id="productGrid"></div>
+            </div>
+            <div class="panel cart"><div class="panel-head"><span class="panel-title">Current sale</span><button class="btn small" id="clearCart">Clear</button></div><div class="cart-body" id="cartItems"></div><div class="cart-sum"><div class="sum-line"><span>Subtotal</span><strong id="cartSubtotal">KSh 0</strong></div><div class="sum-line"><span>Tax</span><strong id="cartTax">KSh 0</strong></div><div class="sum-line total"><span>Total</span><span id="cartTotal">KSh 0</span></div><select class="field" id="paymentMethod" aria-label="Payment method"><option>Cash</option><option>Card</option><option>Mobile money</option><option>Bank transfer</option></select><button class="btn primary" id="completeSale">Charge KSh 0</button></div></div>
+          </div>
+        </section>
+        <section class="screen" id="screen-inventory">
+          <div class="page-head"><div><div class="eyebrow">Catalog & stock</div><h1>Inventory</h1><p class="subtitle">Manage retail and wholesale pricing alongside available quantities.</p></div><div class="head-actions"><button class="btn" data-print="Stock report">Print report</button><button class="btn primary" id="addProduct">Add product</button></div></div>
+          <div class="panel"><div class="panel-head"><span class="panel-title" id="inventoryCount">Products</span><div class="filters"><input class="field" id="inventorySearch" type="search" placeholder="Search catalog" aria-label="Search inventory"></div></div><div class="table-wrap"><table><thead><tr><th>PRODUCT</th><th>SKU</th><th>CATEGORY</th><th>RETAIL</th><th>WHOLESALE</th><th>IN STOCK</th><th></th></tr></thead><tbody id="inventoryRows"></tbody></table></div></div>
+        </section>
+        <section class="screen" id="screen-repairs">
+          <div class="page-head"><div><div class="eyebrow">Service desk</div><h1>Phone repairs</h1><p class="subtitle">Track device intake, customer contact and repair status.</p></div><div class="head-actions"><button class="btn" data-print="Repair tickets">Print report</button><button class="btn primary" id="newRepair">New repair</button></div></div>
+          <div class="panel"><div class="panel-head"><span class="panel-title" id="repairCount">Repair tickets</span><div class="filters"><select class="field" id="repairFilter" aria-label="Filter repair tickets"><option value="All">All tickets</option><option>Waiting</option><option>In progress</option><option>Ready</option><option>Collected</option></select></div></div><div class="panel-body"><div class="repair-list" id="repairList"></div></div></div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <div class="notice" id="notice" role="status" aria-live="polite"></div>
+  <div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><strong id="modalTitle"></strong><button id="closeModal" aria-label="Close">&times;</button></div><div class="modal-content" id="modalContent"></div><div class="modal-foot"><button class="btn" id="cancelModal">Cancel</button><button class="btn primary" id="saveModal">Save</button></div></div></div>
+  <script>
+    const initialProducts = [
+      { id: "p1", name: "USB-C fast charger 25W", sku: "CHG-025", category: "Chargers", retail: 2460, wholesale: 1620, stock: 24, reorder: 5 },
+      { id: "p2", name: "Braided USB-C cable 1m", sku: "CBL-C1M", category: "Cables", retail: 1295, wholesale: 745, stock: 37, reorder: 8 },
+      { id: "p3", name: "Tempered glass protector", sku: "SCR-TG01", category: "Protection", retail: 1555, wholesale: 905, stock: 4, reorder: 6 },
+      { id: "p4", name: "Magnetic phone stand", sku: "STD-MAG", category: "Stands", retail: 1880, wholesale: 1200, stock: 12, reorder: 4 },
+      { id: "p5", name: "Wireless earbuds", sku: "AUD-WL02", category: "Audio", retail: 4535, wholesale: 3110, stock: 9, reorder: 3 },
+      { id: "p6", name: "10,000mAh power bank", sku: "PWR-10K", category: "Power", retail: 3885, wholesale: 2590, stock: 7, reorder: 3 },
+      { id: "p7", name: "Clear shockproof case", sku: "CAS-CLR1", category: "Protection", retail: 2075, wholesale: 1230, stock: 18, reorder: 5 },
+      { id: "p8", name: "Lightning cable 1m", sku: "CBL-L1M", category: "Cables", retail: 1555, wholesale: 905, stock: 3, reorder: 6 },
+      { id: "p9", name: "Dual USB car charger", sku: "CHG-CAR2", category: "Chargers", retail: 2010, wholesale: 1330, stock: 16, reorder: 4 }
+    ];
+    const readStore = (key, fallback) => {
+      try { const value = localStorage.getItem(key); return value ? JSON.parse(value) : fallback; }
+      catch (error) { return fallback; }
+    };
+    const usdToKesRate = 129.556657;
+    const convertUsdToKes = amount => Math.round(Number(amount) * usdToKesRate / 5) * 5;
+    function migrateLegacyCurrency() {
+      if (localStorage.getItem("counterpoint-currency-version") === "kes-v1") return;
+      const storedProducts = readStore("counterpoint-products", null);
+      const storedSales = readStore("counterpoint-sales", null);
+      const storedRepairs = readStore("counterpoint-repairs", null);
+      if (Array.isArray(storedProducts)) {
+        localStorage.setItem("counterpoint-products", JSON.stringify(storedProducts.map(product => ({ ...product, retail: convertUsdToKes(product.retail), wholesale: convertUsdToKes(product.wholesale) }))));
+      }
+      if (Array.isArray(storedSales)) {
+        localStorage.setItem("counterpoint-sales", JSON.stringify(storedSales.map(sale => {
+          const items = Array.isArray(sale.items) ? sale.items.map(item => ({ ...item, price: convertUsdToKes(item.price) })) : [];
+          const total = items.length ? items.reduce((sum, item) => sum + item.price * item.quantity, 0) : convertUsdToKes(sale.total);
+          return { ...sale, items, total };
+        })));
+      }
+      if (Array.isArray(storedRepairs)) {
+        localStorage.setItem("counterpoint-repairs", JSON.stringify(storedRepairs.map(ticket => ({ ...ticket, estimate: convertUsdToKes(ticket.estimate) }))));
+      }
+      localStorage.setItem("counterpoint-currency-version", "kes-v1");
+    }
+    migrateLegacyCurrency();
+    let products = readStore("counterpoint-products", initialProducts);
+    let sales = readStore("counterpoint-sales", []);
+    let repairs = readStore("counterpoint-repairs", []);
+    let cart = [];
+    let mode = "retail";
+    let category = "All";
+    let modalSubmit = null;
+    const money = value => "KSh " + Number(value).toLocaleString("en-KE", { maximumFractionDigits: 2 });
+    const safe = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+    const persist = () => {
+      localStorage.setItem("counterpoint-products", JSON.stringify(products));
+      localStorage.setItem("counterpoint-sales", JSON.stringify(sales));
+      localStorage.setItem("counterpoint-repairs", JSON.stringify(repairs));
+    };
+    function notify(message) {
+      const element = document.getElementById("notice");
+      element.textContent = message;
+      element.classList.add("show");
+      clearTimeout(notify.timer);
+      notify.timer = setTimeout(() => element.classList.remove("show"), 2400);
+    }
+    function showScreen(name) {
+      document.querySelectorAll(".screen").forEach(screen => screen.classList.toggle("active", screen.id === "screen-" + name));
+      document.querySelectorAll(".nav-btn").forEach(button => button.classList.toggle("active", button.dataset.screen === name));
+      const labels = { overview: "Overview", checkout: "Checkout", inventory: "Inventory", repairs: "Repairs" };
+      document.getElementById("crumbCurrent").textContent = labels[name];
+      if (name === "overview") renderDashboard();
+      if (name === "checkout") renderProducts();
+      if (name === "inventory") renderInventory();
+      if (name === "repairs") renderRepairs();
+    }
+    function renderDashboard() {
+      const today = new Date().toDateString();
+      const todaySales = sales.filter(sale => new Date(sale.date).toDateString() === today);
+      document.getElementById("metricSales").textContent = money(todaySales.reduce((sum, sale) => sum + sale.total, 0));
+      document.getElementById("metricItems").textContent = todaySales.reduce((sum, sale) => sum + sale.items.reduce((count, item) => count + item.quantity, 0), 0);
+      document.getElementById("metricRepairs").textContent = repairs.filter(ticket => ticket.status !== "Collected").length;
+      document.getElementById("metricLow").textContent = products.filter(product => product.stock <= product.reorder).length;
+      const rows = todaySales.map(sale => `<tr><td class="product-name">${safe(sale.receipt)}</td><td>${new Date(sale.date).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</td><td><span class="tag">${safe(sale.mode)}</span></td><td>${safe(sale.payment)}</td><td class="product-name">${money(sale.total)}</td></tr>`).join("");
+      document.getElementById("recentSales").innerHTML = rows || `<tr><td colspan="5" class="empty-note">No sales yet. Your completed sales will appear here.</td></tr>`;
+    }
+    function renderCategories() {
+      const values = ["All", ...new Set(products.map(product => product.category))];
+      document.getElementById("categories").innerHTML = values.map(value => `<button class="category ${category === value ? "active" : ""}" data-category="${safe(value)}">${safe(value)}</button>`).join("");
+      document.querySelectorAll(".category").forEach(button => button.addEventListener("click", () => { category = button.dataset.category; renderProducts(); }));
+    }
+    function renderProducts() {
+      renderCategories();
+      const query = document.getElementById("productSearch").value.trim().toLowerCase();
+      const visible = products.filter(product => (category === "All" || product.category === category) && `${product.name} ${product.sku}`.toLowerCase().includes(query));
+      document.getElementById("productGrid").innerHTML = visible.map(product => `<button class="product-card" data-product="${safe(product.id)}" ${product.stock < 1 ? "disabled" : ""}><span class="product-icon">${safe(product.category.slice(0, 2).toUpperCase())}</span><strong>${safe(product.name)}</strong><span class="product-bottom"><span class="product-price">${money(mode === "retail" ? product.retail : product.wholesale)}</span><span class="product-stock">${product.stock} in stock</span></span></button>`).join("") || `<div class="empty-note">No matching products.</div>`;
+      document.querySelectorAll(".product-card[data-product]").forEach(button => button.addEventListener("click", () => addToCart(button.dataset.product)));
+      renderCart();
+    }
+    function addToCart(id) {
+      const product = products.find(item => item.id === id);
+      if (!product || product.stock < 1) return;
+      const existing = cart.find(item => item.id === id);
+      if (existing) {
+        if (existing.quantity >= product.stock) return notify("Not enough stock for that quantity.");
+        existing.quantity++;
+      } else cart.push({ id, quantity: 1 });
+      renderCart();
+    }
+    function renderCart() {
+      const element = document.getElementById("cartItems");
+      element.innerHTML = cart.length ? cart.map(item => {
+        const product = products.find(entry => entry.id === item.id);
+        if (!product) return "";
+        const price = mode === "retail" ? product.retail : product.wholesale;
+        return `<div class="cart-row"><div><div class="cart-row-name">${safe(product.name)}</div><div class="cart-row-price">${money(price)} each</div><div class="qty-controls"><button class="qty-btn" data-qty="-1" data-id="${safe(product.id)}" aria-label="Decrease quantity">-</button><span class="qty-val">${item.quantity}</span><button class="qty-btn" data-qty="1" data-id="${safe(product.id)}" aria-label="Increase quantity">+</button></div></div><strong>${money(price * item.quantity)}</strong></div>`;
+      }).join("") : `<div class="cart-empty">Your basket is empty.</div>`;
+      element.querySelectorAll(".qty-btn").forEach(button => button.addEventListener("click", () => changeQuantity(button.dataset.id, Number(button.dataset.qty))));
+      const subtotal = cart.reduce((sum, item) => {
+        const product = products.find(entry => entry.id === item.id);
+        return sum + (product ? (mode === "retail" ? product.retail : product.wholesale) * item.quantity : 0);
+      }, 0);
+      const tax = Math.round(subtotal * 0.0 * 100) / 100;
+      document.getElementById("cartSubtotal").textContent = money(subtotal);
+      document.getElementById("cartTax").textContent = money(tax);
+      document.getElementById("cartTotal").textContent = money(subtotal + tax);
+      document.getElementById("completeSale").textContent = "Charge " + money(subtotal + tax);
+    }
+    function changeQuantity(id, delta) {
+      const item = cart.find(entry => entry.id === id);
+      const product = products.find(entry => entry.id === id);
+      if (!item || !product) return;
+      item.quantity += delta;
+      if (item.quantity <= 0) cart = cart.filter(entry => entry.id !== id);
+      else if (item.quantity > product.stock) { item.quantity = product.stock; notify("Quantity capped at available stock."); }
+      renderCart();
+    }
+    function completeSale() {
+      if (!cart.length) return notify("Add an item before charging.");
+      for (const item of cart) {
+        const product = products.find(entry => entry.id === item.id);
+        if (!product || product.stock < item.quantity) return notify("Stock changed. Check the basket and try again.");
+      }
+      const items = cart.map(item => {
+        const product = products.find(entry => entry.id === item.id);
+        const price = mode === "retail" ? product.retail : product.wholesale;
+        return { id: product.id, name: product.name, price, quantity: item.quantity };
+      });
+      const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      products = products.map(product => {
+        const line = cart.find(item => item.id === product.id);
+        return line ? { ...product, stock: product.stock - line.quantity } : product;
+      });
+      sales.unshift({ receipt: "CP-" + Date.now().toString().slice(-7), date: new Date().toISOString(), mode: mode === "retail" ? "Retail" : "Wholesale", payment: document.getElementById("paymentMethod").value, items, total });
+      cart = [];
+      persist(); renderProducts(); renderDashboard();
+      notify("Sale completed and stock updated.");
+    }
+    function renderInventory() {
+      const query = document.getElementById("inventorySearch").value.trim().toLowerCase();
+      const visible = products.filter(product => `${product.name} ${product.sku} ${product.category}`.toLowerCase().includes(query));
+      document.getElementById("inventoryCount").textContent = `${visible.length} product${visible.length === 1 ? "" : "s"}`;
+      document.getElementById("inventoryRows").innerHTML = visible.map(product => `<tr><td><div class="product-name">${safe(product.name)}</div><div class="subcell">Reorder at ${product.reorder}</div></td><td>${safe(product.sku)}</td><td>${safe(product.category)}</td><td>${money(product.retail)}</td><td>${money(product.wholesale)}</td><td><span class="tag ${product.stock <= product.reorder ? "warn" : ""}">${product.stock}</span></td><td><button class="btn small" data-edit-product="${safe(product.id)}">Edit</button></td></tr>`).join("") || `<tr><td colspan="7" class="empty-note">No products found.</td></tr>`;
+      document.querySelectorAll("[data-edit-product]").forEach(button => button.addEventListener("click", () => openProductModal(button.dataset.editProduct)));
+    }
+    function openModal(title, body, submit) {
+      document.getElementById("modalTitle").textContent = title;
+      document.getElementById("modalContent").innerHTML = body;
+      modalSubmit = submit;
+      document.getElementById("modalBackdrop").classList.add("open");
+      document.getElementById("modalContent").querySelector("input")?.focus();
+    }
+    function closeModal() { document.getElementById("modalBackdrop").classList.remove("open"); modalSubmit = null; }
+    function openProductModal(id) {
+      const product = products.find(item => item.id === id);
+      const value = key => product ? safe(product[key]) : "";
+      const fields = `<div class="form-grid"><div class="form-field full"><label for="fName">Product name</label><input class="field" id="fName" required value="${value("name")}" placeholder="e.g. USB-C charger"></div><div class="form-field"><label for="fSku">SKU</label><input class="field" id="fSku" required value="${value("sku")}" placeholder="CHG-001"></div><div class="form-field"><label for="fCategory">Category</label><input class="field" id="fCategory" required value="${value("category")}" placeholder="Chargers"></div><div class="form-field"><label for="fRetail">Retail price</label><input class="field" id="fRetail" type="number" min="0" step="0.01" required value="${product ? product.retail : ""}"></div><div class="form-field"><label for="fWholesale">Wholesale price</label><input class="field" id="fWholesale" type="number" min="0" step="0.01" required value="${product ? product.wholesale : ""}"></div><div class="form-field"><label for="fStock">Quantity in stock</label><input class="field" id="fStock" type="number" min="0" step="1" required value="${product ? product.stock : "0"}"></div><div class="form-field"><label for="fReorder">Reorder point</label><input class="field" id="fReorder" type="number" min="0" step="1" required value="${product ? product.reorder : "5"}"></div></div>`;
+      openModal(product ? "Edit product" : "Add product", fields, () => {
+        const name = document.getElementById("fName").value.trim();
+        const sku = document.getElementById("fSku").value.trim();
+        const categoryValue = document.getElementById("fCategory").value.trim();
+        const retail = Number(document.getElementById("fRetail").value);
+        const wholesale = Number(document.getElementById("fWholesale").value);
+        const stock = Number(document.getElementById("fStock").value);
+        const reorder = Number(document.getElementById("fReorder").value);
+        if (!name || !sku || !categoryValue || [retail, wholesale, stock, reorder].some(number => !Number.isFinite(number) || number < 0)) return notify("Fill in all product fields with valid values.");
+        if (products.some(item => item.sku.toLowerCase() === sku.toLowerCase() && item.id !== id)) return notify("That SKU is already in use.");
+        if (product) Object.assign(product, { name, sku, category: categoryValue, retail, wholesale, stock, reorder });
+        else products.unshift({ id: "p" + Date.now(), name, sku, category: categoryValue, retail, wholesale, stock, reorder });
+        persist(); closeModal(); renderInventory(); renderProducts(); notify(product ? "Product updated." : "Product added.");
+      });
+    }
+    function renderRepairs() {
+      const filter = document.getElementById("repairFilter").value;
+      const visible = repairs.filter(ticket => filter === "All" || ticket.status === filter);
+      document.getElementById("repairCount").textContent = `${visible.length} ticket${visible.length === 1 ? "" : "s"}`;
+      document.getElementById("repairList").innerHTML = visible.map(ticket => `<article class="repair-card"><div><strong>${safe(ticket.device)} <span class="tag repair">${safe(ticket.status)}</span></strong><p>${safe(ticket.customer)} &middot; ${safe(ticket.phone)} &middot; ${safe(ticket.issue)}</p><p>Received ${new Date(ticket.date).toLocaleDateString()}${ticket.estimate ? " &middot; Estimate " + money(ticket.estimate) : ""}</p></div><div class="repair-actions"><select class="field" data-repair-status="${safe(ticket.id)}" aria-label="Repair status for ${safe(ticket.device)}"><option ${ticket.status === "Waiting" ? "selected" : ""}>Waiting</option><option ${ticket.status === "In progress" ? "selected" : ""}>In progress</option><option ${ticket.status === "Ready" ? "selected" : ""}>Ready</option><option ${ticket.status === "Collected" ? "selected" : ""}>Collected</option></select><button class="btn small" data-delete-repair="${safe(ticket.id)}" aria-label="Delete repair ticket">Remove</button></div></article>`).join("") || `<div class="empty-note">No repair tickets here yet.</div>`;
+      document.querySelectorAll("[data-repair-status]").forEach(select => select.addEventListener("change", () => {
+        const ticket = repairs.find(entry => entry.id === select.dataset.repairStatus);
+        if (ticket) { ticket.status = select.value; persist(); renderRepairs(); renderDashboard(); }
+      }));
+      document.querySelectorAll("[data-delete-repair]").forEach(button => button.addEventListener("click", () => {
+        repairs = repairs.filter(ticket => ticket.id !== button.dataset.deleteRepair); persist(); renderRepairs(); renderDashboard(); notify("Repair ticket removed.");
+      }));
+    }
+    function openRepairModal() {
+      const body = `<div class="form-grid"><div class="form-field"><label for="rCustomer">Customer name</label><input class="field" id="rCustomer" required></div><div class="form-field"><label for="rPhone">Phone number</label><input class="field" id="rPhone" required></div><div class="form-field"><label for="rDevice">Device</label><input class="field" id="rDevice" required placeholder="Brand and model"></div><div class="form-field"><label for="rEstimate">Estimate</label><input class="field" id="rEstimate" type="number" min="0" step="0.01" placeholder="0.00"></div><div class="form-field full"><label for="rIssue">Reported issue</label><input class="field" id="rIssue" required placeholder="Screen, battery, charging port..."></div></div>`;
+      openModal("New repair ticket", body, () => {
+        const customer = document.getElementById("rCustomer").value.trim();
+        const phone = document.getElementById("rPhone").value.trim();
+        const device = document.getElementById("rDevice").value.trim();
+        const issue = document.getElementById("rIssue").value.trim();
+        const estimateValue = document.getElementById("rEstimate").value;
+        const estimate = estimateValue === "" ? 0 : Number(estimateValue);
+        if (!customer || !phone || !device || !issue || !Number.isFinite(estimate) || estimate < 0) return notify("Complete the required repair details.");
+        repairs.unshift({ id: "r" + Date.now(), customer, phone, device, issue, estimate, date: new Date().toISOString(), status: "Waiting" });
+        persist(); closeModal(); renderRepairs(); renderDashboard(); notify("Repair ticket created.");
+      });
+    }
+    document.querySelectorAll(".nav-btn").forEach(button => button.addEventListener("click", () => showScreen(button.dataset.screen)));
+    document.querySelectorAll("[data-go]").forEach(button => button.addEventListener("click", () => showScreen(button.dataset.go)));
+    document.getElementById("priceMode").addEventListener("click", event => {
+      const button = event.target.closest("[data-mode]");
+      if (!button) return;
+      mode = button.dataset.mode;
+      document.querySelectorAll("#priceMode button").forEach(item => item.classList.toggle("active", item === button));
+      renderProducts();
+    });
+    document.getElementById("productSearch").addEventListener("input", renderProducts);
+    document.getElementById("inventorySearch").addEventListener("input", renderInventory);
+    document.getElementById("clearCart").addEventListener("click", () => { cart = []; renderCart(); });
+    document.getElementById("completeSale").addEventListener("click", completeSale);
+    document.getElementById("addProduct").addEventListener("click", () => openProductModal(null));
+    document.getElementById("newRepair").addEventListener("click", openRepairModal);
+    document.getElementById("repairFilter").addEventListener("change", renderRepairs);
+    document.getElementById("closeModal").addEventListener("click", closeModal);
+    document.getElementById("cancelModal").addEventListener("click", closeModal);
+    document.getElementById("saveModal").addEventListener("click", () => modalSubmit?.());
+    document.getElementById("modalBackdrop").addEventListener("click", event => { if (event.target.id === "modalBackdrop") closeModal(); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape") closeModal(); });
+    document.querySelectorAll("[data-print]").forEach(button => button.addEventListener("click", () => {
+      document.getElementById("printMeta").textContent = `${button.dataset.print} - generated ${new Date().toLocaleString()}`;
+      window.print();
+    }));
+    renderDashboard();
+  </script>
+</body>
+</html>
