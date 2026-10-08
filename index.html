@@ -497,5 +497,14 @@
     }));
     renderDashboard();
   </script>
+  <script>
+    // Ensure overview header shows current local date even if browser cached an old static value
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        const el = document.querySelector('#screen-overview .eyebrow');
+        if (el) el.textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+      } catch (e) { console.error('set overview date', e); }
+    });
+  </script>
 </body>
 </html>
