@@ -312,6 +312,30 @@
     let products = readStore("counterpoint-products", initialProducts);
     let sales = readStore("counterpoint-sales", []);
     let repairs = readStore("counterpoint-repairs", []);
+    // Normalize any legacy date strings to numeric timestamps (ms since epoch)
+    function normalizeTimestamps() {
+      let changed = false;
+      if (Array.isArray(sales)) {
+        sales = sales.map(sale => {
+          if (sale && typeof sale.date === 'string') {
+            const t = Date.parse(sale.date);
+            if (!Number.isNaN(t)) { changed = true; return { ...sale, date: t }; }
+          }
+          return sale;
+        });
+      }
+      if (Array.isArray(repairs)) {
+        repairs = repairs.map(ticket => {
+          if (ticket && typeof ticket.date === 'string') {
+            const t = Date.parse(ticket.date);
+            if (!Number.isNaN(t)) { changed = true; return { ...ticket, date: t }; }
+          }
+          return ticket;
+        });
+      }
+      if (changed) persist();
+    }
+    normalizeTimestamps();
     let cart = [];
     let mode = "retail";
     let category = "All";
