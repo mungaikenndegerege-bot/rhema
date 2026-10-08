@@ -271,6 +271,7 @@
   <div class="notice" id="notice" role="status" aria-live="polite"></div>
   <div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><strong id="modalTitle"></strong><button id="closeModal" aria-label="Close">&times;</button></div><div class="modal-content" id="modalContent"></div><div class="modal-foot"><button class="btn" id="cancelModal">Cancel</button><button class="btn primary" id="saveModal">Save</button></div></div></div>
   <script>
+    try {
     const initialProducts = [
       { id: "p1", name: "USB-C fast charger 25W", sku: "CHG-025", category: "Chargers", retail: 2460, wholesale: 1620, stock: 24, reorder: 5 },
       { id: "p2", name: "Braided USB-C cable 1m", sku: "CBL-C1M", category: "Cables", retail: 1295, wholesale: 745, stock: 37, reorder: 8 },
@@ -734,6 +735,12 @@
       renderDashboard();
       setInterval(renderDashboard, 60000);
     });
+
+    } catch (e) {
+      // Top-level script error fallback - log and surface to user
+      console.error('Top-level script error', e);
+      try { if (typeof notify === 'function') notify('JavaScript error: ' + (e.message || e)); else alert('JavaScript error: ' + (e.message || e)); } catch (__) { /* ignore */ }
+    }
   </script>
 </body>
 </html>
