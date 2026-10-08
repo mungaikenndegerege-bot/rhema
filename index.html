@@ -258,7 +258,7 @@
           </div>
         </section>
         <section class="screen" id="screen-inventory">
-          <div class="page-head"><div><div class="eyebrow">Catalog & stock</div><h1>Inventory</h1><p class="subtitle">Manage retail and wholesale pricing alongside available quantities.</p></div><div class="head-actions"><button class="btn" data-print="Stock report">Print report</button><button class="btn primary" id="addProduct">Add product</button></div></div>
+          <div class="page-head"><div><div class="eyebrow">Catalog & stock</div><h1>Inventory</h1><p class="subtitle">Manage retail and wholesale pricing alongside available quantities.</p></div><div class="head-actions"><button class="btn" data-print="Stock report">Print report</button><button class="btn" id="setInventoryPin">Set PIN</button><button class="btn primary" id="addProduct">Add product</button></div></div>
           <div class="panel"><div class="panel-head"><span class="panel-title" id="inventoryCount">Products</span><div class="filters"><input class="field" id="inventorySearch" type="search" placeholder="Search catalog" aria-label="Search inventory"></div></div><div class="table-wrap"><table><thead><tr><th>PRODUCT</th><th>SKU</th><th>CATEGORY</th><th>RETAIL</th><th>WHOLESALE</th><th>IN STOCK</th><th></th></tr></thead><tbody id="inventoryRows"></tbody></table></div></div>
         </section>
         <section class="screen" id="screen-repairs">
@@ -312,6 +312,11 @@
     let products = readStore("counterpoint-products", initialProducts);
     let sales = readStore("counterpoint-sales", []);
     let repairs = readStore("counterpoint-repairs", []);
+    // Inventory PIN (default 1234)
+    const INVENTORY_PIN_KEY = 'rhema-inventory-pin';
+    if (!localStorage.getItem(INVENTORY_PIN_KEY)) localStorage.setItem(INVENTORY_PIN_KEY, '1234');
+    function getInventoryPin() { return localStorage.getItem(INVENTORY_PIN_KEY) || '1234'; }
+    function setInventoryPin(pin) { localStorage.setItem(INVENTORY_PIN_KEY, String(pin)); notify('Inventory PIN updated.'); }
     // Normalize any legacy date strings to numeric timestamps (ms since epoch)
     function normalizeTimestamps() {
       let changed = false;
@@ -621,8 +626,35 @@
         repairs.unshift({ id: "r" + Date.now(), customer, phone, device, issue, estimate, date: Date.now(), status: "Waiting" });
         persist(); closeModal(); renderRepairs(); renderDashboard(); notify("Repair ticket created.");
       });
+    // Inventory PIN modal and management
+    function requireInventoryPin(successCallback) {
+      const body = `<div class="form-grid"><div class="form-field"><label for="invPin">Enter inventory PIN</label><input class="field" id="invPin" type="password" inputmode="numeric" maxlength="6" autofocus></div></div>`;
+      openModal('Inventory PIN', body, () => {
+        const pin = document.getElementById('invPin')?.value.trim();
+        if (pin === getInventoryPin()) { closeModal(); if (typeof successCallback === 'function') successCallback(); }
+        else notify('Incorrect PIN');
+      });
     }
-    document.querySelectorAll(".nav-btn").forEach(button => button.addEventListener("click", () => showScreen(button.dataset.screen)));
+
+    function openSetPinModal() {
+      const body = `<div class="form-grid"><div class="form-field"><label for="curPin">Current PIN</label><input class="field" id="curPin" type="password" inputmode="numeric" maxlength="6"></div><div class="form-field"><label for="newPin">New PIN (4-6 digits)</label><input class="field" id="newPin" type="password" inputmode="numeric" maxlength="6"></div><div class="form-field"><label for="confirmPin">Confirm new PIN</label><input class="field" id="confirmPin" type="password" inputmode="numeric" maxlength="6"></div></div>`;
+      openModal('Set inventory PIN', body, () => {
+        const cur = document.getElementById('curPin')?.value.trim();
+        const np = document.getElementById('newPin')?.value.trim();
+        const cp = document.getElementById('confirmPin')?.value.trim();
+        if (cur !== getInventoryPin()) return notify('Current PIN incorrect');
+        if (!/^\d{4,6}$/.test(np)) return notify('New PIN must be 4-6 digits');
+        if (np !== cp) return notify('PIN values do not match');
+        setInventoryPin(np); closeModal();
+      });
+    }
+    }
+    document.querySelectorAll(".nav-btn").forEach(button => button.addEventListener("click", () => {
+      if (button.dataset.screen === 'inventory') {
+        // require PIN before opening inventory
+        requireInventoryPin(() => showScreen('inventory'));
+      } else showScreen(button.dataset.screen);
+    }));
     document.querySelectorAll("[data-go]").forEach(button => button.addEventListener("click", () => showScreen(button.dataset.go)));
     document.getElementById("priceMode").addEventListener("click", event => {
       const button = event.target.closest("[data-mode]");
@@ -636,6 +668,7 @@
     document.getElementById("clearCart").addEventListener("click", () => { cart = []; renderCart(); });
     document.getElementById("completeSale").addEventListener("click", completeSale);
     document.getElementById("addProduct").addEventListener("click", () => openProductModal(null));
+    document.getElementById("setInventoryPin").addEventListener("click", openSetPinModal);
     document.getElementById("newRepair").addEventListener("click", openRepairModal);
     document.getElementById("repairFilter").addEventListener("change", renderRepairs);
     document.getElementById("closeModal").addEventListener("click", closeModal);
