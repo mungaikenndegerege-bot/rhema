@@ -690,11 +690,50 @@
       // Keep previous behaviour: open print dialog. The new Download PDF option is available under Reports.
       window.print();
     }));
-    // Ensure no modal is left open on startup and render the dashboard
-    try { closeModal(); } catch (e) { /* ignore */ }
-    renderDashboard();
-    // Refresh dashboard every minute so dates/times reflect the current local time
-    setInterval(renderDashboard, 60000);
+    // Ensure UI is initialized after DOM is ready
+    function attachEventListeners() {
+      if (window._rhema_listeners_attached) return;
+      window._rhema_listeners_attached = true;
+      try {
+        document.querySelectorAll('.nav-btn').forEach(button => button.addEventListener('click', () => {
+          if (button.dataset.screen === 'inventory') {
+            requireInventoryPin(() => showScreen('inventory'));
+          } else showScreen(button.dataset.screen);
+        }));
+      } catch (e) { console.error('nav listeners', e); }
+      try { document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => showScreen(button.dataset.go))); } catch (e) { console.error('data-go', e); }
+      try { document.getElementById('priceMode')?.addEventListener('click', event => {
+        const button = event.target.closest('[data-mode]'); if (!button) return; mode = button.dataset.mode; document.querySelectorAll('#priceMode button').forEach(item => item.classList.toggle('active', item === button)); renderProducts(); }); } catch (e) { console.error('priceMode', e); }
+      try { document.getElementById('productSearch')?.addEventListener('input', renderProducts); } catch (e) { console.error('productSearch', e); }
+      try { document.getElementById('inventorySearch')?.addEventListener('input', renderInventory); } catch (e) { console.error('inventorySearch', e); }
+      try { document.getElementById('clearCart')?.addEventListener('click', () => { cart = []; renderCart(); }); } catch (e) { console.error('clearCart', e); }
+      try { document.getElementById('completeSale')?.addEventListener('click', completeSale); } catch (e) { console.error('completeSale', e); }
+      try { document.getElementById('addProduct')?.addEventListener('click', () => openProductModal(null)); } catch (e) { console.error('addProduct', e); }
+      try { document.getElementById('setInventoryPin')?.addEventListener('click', openSetPinModal); } catch (e) { console.error('setInventoryPin', e); }
+      try { document.getElementById('newRepair')?.addEventListener('click', openRepairModal); } catch (e) { console.error('newRepair', e); }
+      try { document.getElementById('repairFilter')?.addEventListener('change', renderRepairs); } catch (e) { console.error('repairFilter', e); }
+      try { document.getElementById('closeModal')?.addEventListener('click', closeModal); } catch (e) { console.error('closeModal', e); }
+      try { document.getElementById('cancelModal')?.addEventListener('click', closeModal); } catch (e) { console.error('cancelModal', e); }
+      try { document.getElementById('saveModal')?.addEventListener('click', () => modalSubmit?.()); } catch (e) { console.error('saveModal', e); }
+      try { document.getElementById('modalBackdrop')?.addEventListener('click', event => { if (event.target.id === 'modalBackdrop') closeModal(); }); } catch (e) { console.error('modalBackdrop', e); }
+      try { document.addEventListener('keydown', event => { if (event.key === 'Escape') closeModal(); }); } catch (e) { console.error('keydown', e); }
+      try { document.querySelectorAll('[data-print]').forEach(button => button.addEventListener('click', () => {
+        document.getElementById('printMeta').textContent = `${button.dataset.print} - generated ${new Date().toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}`;
+        window.print();
+      })); } catch (e) { console.error('data-print', e); }
+      try {
+        document.getElementById('reportMonth')?.addEventListener('change', renderReportPreview);
+        document.getElementById('downloadExcel')?.addEventListener('click', () => { const month = document.getElementById('reportMonth').value; const report = generateMonthlyReport(month); const csv = buildCsv(report); downloadBlob(csv, `rhema-report-${month}.csv`, 'text/csv'); });
+        document.getElementById('downloadPdf')?.addEventListener('click', async () => { const month = document.getElementById('reportMonth').value; const report = generateMonthlyReport(month); await downloadReportPdf(report, month); });
+      } catch (e) { console.error('reports listeners', e); }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      try { closeModal(); } catch (e) { /* ignore */ }
+      attachEventListeners();
+      renderDashboard();
+      setInterval(renderDashboard, 60000);
+    });
   </script>
 </body>
 </html>
