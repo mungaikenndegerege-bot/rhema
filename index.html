@@ -225,7 +225,7 @@
       <div class="content">
         <div class="print-header"><h1>Rhema Mobile Technologies</h1><p id="printMeta"></p></div>
         <section class="screen active" id="screen-overview">
-          <div class="page-head"><div><div class="eyebrow">Wednesday, October 7</div><h1>Good morning, operator</h1><p class="subtitle">Here is what is happening at your counter today.</p></div><div class="head-actions"><button class="btn" data-print="Daily sales report">Print report</button><button class="btn primary" data-go="checkout">New sale</button></div></div>
+          <div class="page-head"><div><div class="eyebrow" id="headerDate"></div><h1>Good morning, operator</h1><p class="subtitle">Here is what is happening at your counter today.</p></div><div class="head-actions"><button class="btn" data-print="Daily sales report">Print report</button><button class="btn primary" data-go="checkout">New sale</button></div></div>
           <div class="metrics">
             <div class="metric"><div class="metric-label">Today's sales</div><div class="metric-value" id="metricSales">KSh 0</div><div class="metric-foot">Completed transactions</div></div>
             <div class="metric"><div class="metric-label">Items sold today</div><div class="metric-value" id="metricItems">0</div><div class="metric-foot">Across all sales</div></div>
@@ -341,7 +341,14 @@
       if (name === "repairs") renderRepairs();
       if (name === "reports") renderReportsScreen();
     }
+    function updateHeaderDate() {
+      const el = document.getElementById('headerDate');
+      if (!el) return;
+      const now = new Date();
+      el.textContent = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    }
     function renderDashboard() {
+      updateHeaderDate();
       const today = new Date().toDateString();
       const todaySales = sales.filter(sale => new Date(sale.date).toDateString() === today);
       document.getElementById("metricSales").textContent = money(todaySales.reduce((sum, sale) => sum + sale.total, 0));
