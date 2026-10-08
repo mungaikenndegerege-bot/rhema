@@ -200,6 +200,9 @@
       .metric { min-height: 0; }
     }
   </style>
+  <!-- jsPDF and AutoTable for client-side PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
   <div class="shell">
@@ -212,6 +215,7 @@
           <button class="nav-btn" data-screen="checkout"><span class="nav-icon">&#9633;</span>Checkout</button>
           <button class="nav-btn" data-screen="inventory"><span class="nav-icon">&#9776;</span>Inventory</button>
           <button class="nav-btn" data-screen="repairs"><span class="nav-icon">&#9881;</span>Repairs</button>
+          <button class="nav-btn" data-screen="reports"><span class="nav-icon">&#128202;</span>Reports</button>
         </nav>
       </div>
       <div class="aside-note"><strong>Local workspace</strong>Sales, products and repair tickets are saved in this browser.</div>
@@ -231,6 +235,15 @@
           <div class="dashboard-grid">
             <div class="panel"><div class="panel-head"><span class="panel-title">Sales today</span><button class="btn small" data-go="checkout">Open checkout</button></div><div class="table-wrap"><table><thead><tr><th>RECEIPT</th><th>TIME</th><th>TYPE</th><th>PAYMENT</th><th>TOTAL</th></tr></thead><tbody id="recentSales"></tbody></table></div></div>
             <div class="panel"><div class="panel-head"><span class="panel-title">Quick actions</span></div><div class="panel-body quick-links"><button class="quick-link" data-go="checkout"><strong>Start a sale</strong><span>Ring up accessories at retail or wholesale pricing.</span></button><button class="quick-link" data-go="repairs"><strong>Check repair jobs</strong><span>Log a device, issue and customer contact.</span></button><button class="quick-link" data-go="inventory"><strong>Review stock</strong><span>See quantities and update the product catalog.</span></button></div></div>
+          </div>
+        </section>
+        <section class="screen" id="screen-reports">
+          <div class="page-head"><div><div class="eyebrow">Reports</div><h1>Monthly reports</h1><p class="subtitle">Generate combined monthly sales and repairs reports. Choose a month and download as Excel (CSV) or PDF.</p></div></div>
+          <div class="panel"><div class="panel-head"><span class="panel-title">Monthly combined report</span></div>
+            <div class="panel-body">
+              <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;"><label for="reportMonth">Month</label><input id="reportMonth" type="month" class="field" style="min-width:160px;" aria-label="Select month for report"><button id="downloadExcel" class="btn">Download Excel (CSV)</button><button id="downloadPdf" class="btn primary">Download PDF</button></div>
+              <div id="reportPreview" class="table-wrap"></div>
+            </div>
           </div>
         </section>
         <section class="screen" id="screen-checkout">
@@ -320,12 +333,13 @@
     function showScreen(name) {
       document.querySelectorAll(".screen").forEach(screen => screen.classList.toggle("active", screen.id === "screen-" + name));
       document.querySelectorAll(".nav-btn").forEach(button => button.classList.toggle("active", button.dataset.screen === name));
-      const labels = { overview: "Overview", checkout: "Checkout", inventory: "Inventory", repairs: "Repairs" };
+      const labels = { overview: "Overview", checkout: "Checkout", inventory: "Inventory", repairs: "Repairs", reports: "Reports" };
       document.getElementById("crumbCurrent").textContent = labels[name];
       if (name === "overview") renderDashboard();
       if (name === "checkout") renderProducts();
       if (name === "inventory") renderInventory();
       if (name === "repairs") renderRepairs();
+      if (name === "reports") renderReportsScreen();
     }
     function renderDashboard() {
       const today = new Date().toDateString();
@@ -334,7 +348,7 @@
       document.getElementById("metricItems").textContent = todaySales.reduce((sum, sale) => sum + sale.items.reduce((count, item) => count + item.quantity, 0), 0);
       document.getElementById("metricRepairs").textContent = repairs.filter(ticket => ticket.status !== "Collected").length;
       document.getElementById("metricLow").textContent = products.filter(product => product.stock <= product.reorder).length;
-      const rows = todaySales.map(sale => `<tr><td class="product-name">${safe(sale.receipt)}</td><td>${new Date(sale.date).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</td><td><span class="tag">${safe(sale.mode)}</span></td><td>${safe(sale.payment)}</td><td class="product-name">${money(sale.total)}</td></tr>`).join("");
+      const rows = todaySales.map(sale => `<tr><td class="product-name">${safe(sale.receipt)}</td><td>${new Date(sale.date).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", hour12: false})}</td><td><span class="tag">${safe(sale.mode)}</span></td><td>${safe(sale.payment)}</td><td class="product-name">${money(sale.total)}</td></tr>`).join("");
       document.getElementById("recentSales").innerHTML = rows || `<tr><td colspan="5" class="empty-note">No sales yet. Your completed sales will appear here.</td></tr>`;
     }
     function renderCategories() {
@@ -404,7 +418,7 @@
         const line = cart.find(item => item.id === product.id);
         return line ? { ...product, stock: product.stock - line.quantity } : product;
       });
-      sales.unshift({ receipt: "CP-" + Date.now().toString().slice(-7), date: new Date().toISOString(), mode: mode === "retail" ? "Retail" : "Wholesale", payment: document.getElementById("paymentMethod").value, items, total });
+      sales.unshift({ receipt: "CP-" + Date.now().toString().slice(-7), date: Date.now(), mode: mode === "retail" ? "Retail" : "Wholesale", payment: document.getElementById("paymentMethod").value, items, total });
       cart = [];
       persist(); renderProducts(); renderDashboard();
       notify("Sale completed and stock updated.");
@@ -456,6 +470,113 @@
         repairs = repairs.filter(ticket => ticket.id !== button.dataset.deleteRepair); persist(); renderRepairs(); renderDashboard(); notify("Repair ticket removed.");
       }));
     }
+    // Reports screen: generate monthly combined report and provide CSV (Excel) and PDF downloads
+    function renderReportsScreen() {
+      // default month to current
+      const monthInput = document.getElementById("reportMonth");
+      if (!monthInput.value) {
+        const now = new Date();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        monthInput.value = `${now.getFullYear()}-${mm}`;
+      }
+      renderReportPreview();
+      document.getElementById("reportMonth").addEventListener("change", renderReportPreview);
+      document.getElementById("downloadExcel").addEventListener("click", () => {
+        const month = document.getElementById("reportMonth").value;
+        const report = generateMonthlyReport(month);
+        const csv = buildCsv(report);
+        downloadBlob(csv, `rhema-report-${month}.csv`, 'text/csv');
+      });
+      document.getElementById("downloadPdf").addEventListener("click", async () => {
+        const month = document.getElementById("reportMonth").value;
+        const report = generateMonthlyReport(month);
+        await downloadReportPdf(report, month);
+      });
+    }
+
+    function generateMonthlyReport(monthStr) {
+      // monthStr like "2026-10"
+      if (!monthStr) monthStr = new Date().toISOString().slice(0,7);
+      const [year, month] = monthStr.split('-').map(Number);
+      const salesRows = sales.filter(sale => {
+        const d = new Date(sale.date);
+        return d.getFullYear() === year && (d.getMonth() + 1) === month;
+      }).map(sale => ({ receipt: sale.receipt, date: new Date(sale.date).toLocaleDateString(), time: new Date(sale.date).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false}), mode: sale.mode, payment: sale.payment, total: sale.total }));
+      const repairRows = repairs.filter(r => {
+        const d = new Date(r.date);
+        return d.getFullYear() === year && (d.getMonth() + 1) === month;
+      }).map(r => ({ id: r.id, date: new Date(r.date).toLocaleDateString(), customer: r.customer, phone: r.phone, device: r.device, issue: r.issue, estimate: r.estimate, status: r.status }));
+      const totals = { salesCount: salesRows.length, salesTotal: salesRows.reduce((s, r) => s + r.total, 0), repairsCount: repairRows.length };
+      return { month: monthStr, salesRows, repairRows, totals };
+    }
+
+    function buildCsv(report) {
+      const lines = [];
+      lines.push(`"Rhema Mobile Technologies - Monthly Report","${report.month}"`);
+      lines.push('');
+      lines.push('Sales');
+      lines.push('Receipt,Date,Time,Type,Payment,Total');
+      for (const s of report.salesRows) lines.push([s.receipt, s.date, s.time, s.mode, s.payment, s.total].map(x => `"${String(x).replace(/"/g,'""')}"`).join(','));
+      lines.push('');
+      lines.push('Repairs');
+      lines.push('ID,Date,Customer,Phone,Device,Issue,Estimate,Status');
+      for (const r of report.repairRows) lines.push([r.id, r.date, r.customer, r.phone, r.device, r.issue, r.estimate, r.status].map(x => `"${String(x).replace(/"/g,'""')}"`).join(','));
+      lines.push('');
+      lines.push(`Totals,Sales Count: ${report.totals.salesCount},Sales Total: ${report.totals.salesTotal},Repairs Count: ${report.totals.repairsCount}`);
+      return lines.join('\n');
+    }
+
+    function downloadBlob(content, filename, mime) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function downloadReportPdf(report, month) {
+      try {
+        const jspdfLib = window.jspdf;
+        const PDFClass = jspdfLib ? jspdfLib.jsPDF : window.jsPDF;
+        const doc = new PDFClass();
+        doc.setFontSize(12);
+        doc.text(`Rhema Mobile Technologies - Monthly Report (${report.month})`, 14, 18);
+        let y = 26;
+        if (report.salesRows.length) {
+          doc.text('Sales', 14, y);
+          doc.autoTable({ startY: y + 2, head: [['Receipt','Date','Time','Type','Payment','Total']], body: report.salesRows.map(r => [r.receipt, r.date, r.time, r.mode, r.payment, r.total]) });
+          y = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : y + 80;
+        } else {
+          doc.text('No sales for this month', 14, y + 6);
+          y += 20;
+        }
+        if (report.repairRows.length) {
+          doc.text('Repairs', 14, y);
+          doc.autoTable({ startY: y + 2, head: [['ID','Date','Customer','Phone','Device','Estimate','Status']], body: report.repairRows.map(r => [r.id, r.date, r.customer, r.phone, r.device, r.estimate, r.status]) });
+        } else {
+          doc.text('No repairs for this month', 14, y + 6);
+        }
+        doc.save(`rhema-report-${month}.pdf`);
+      } catch (e) { notify('PDF generation failed.'); console.error(e); }
+    }
+
+    function renderReportPreview() {
+      const month = document.getElementById('reportMonth').value;
+      const report = generateMonthlyReport(month);
+      const wrap = document.getElementById('reportPreview');
+      let html = `<div style="margin-bottom:10px;">Sales: ${report.totals.salesCount} transactions &middot; Total ${money(report.totals.salesTotal)} | Repairs: ${report.totals.repairsCount}</div>`;
+      if (report.salesRows.length) {
+        html += '<table><thead><tr><th>Receipt</th><th>Date</th><th>Time</th><th>Type</th><th>Payment</th><th>Total</th></tr></thead><tbody>' + report.salesRows.map(s => `<tr><td class="product-name">${safe(s.receipt)}</td><td>${safe(s.date)}</td><td>${safe(s.time)}</td><td>${safe(s.mode)}</td><td>${safe(s.payment)}</td><td>${money(s.total)}</td></tr>`).join('') + '</tbody></table>';
+      } else html += '<div class="empty-note">No sales in this month.</div>';
+      if (report.repairRows.length) {
+        html += '<h4 style="margin-top:12px;">Repairs</h4><table><thead><tr><th>ID</th><th>Date</th><th>Customer</th><th>Phone</th><th>Device</th><th>Estimate</th><th>Status</th></tr></thead><tbody>' + report.repairRows.map(r => `<tr><td>${safe(r.id)}</td><td>${safe(r.date)}</td><td>${safe(r.customer)}</td><td>${safe(r.phone)}</td><td>${safe(r.device)}</td><td>${money(r.estimate)}</td><td>${safe(r.status)}</td></tr>`).join('') + '</tbody></table>';
+      }
+      wrap.innerHTML = html;
+    }
     function openRepairModal() {
       const body = `<div class="form-grid"><div class="form-field"><label for="rCustomer">Customer name</label><input class="field" id="rCustomer" required></div><div class="form-field"><label for="rPhone">Phone number</label><input class="field" id="rPhone" required></div><div class="form-field"><label for="rDevice">Device</label><input class="field" id="rDevice" required placeholder="Brand and model"></div><div class="form-field"><label for="rEstimate">Estimate</label><input class="field" id="rEstimate" type="number" min="0" step="0.01" placeholder="0.00"></div><div class="form-field full"><label for="rIssue">Reported issue</label><input class="field" id="rIssue" required placeholder="Screen, battery, charging port..."></div></div>`;
       openModal("New repair ticket", body, () => {
@@ -466,7 +587,7 @@
         const estimateValue = document.getElementById("rEstimate").value;
         const estimate = estimateValue === "" ? 0 : Number(estimateValue);
         if (!customer || !phone || !device || !issue || !Number.isFinite(estimate) || estimate < 0) return notify("Complete the required repair details.");
-        repairs.unshift({ id: "r" + Date.now(), customer, phone, device, issue, estimate, date: new Date().toISOString(), status: "Waiting" });
+        repairs.unshift({ id: "r" + Date.now(), customer, phone, device, issue, estimate, date: Date.now(), status: "Waiting" });
         persist(); closeModal(); renderRepairs(); renderDashboard(); notify("Repair ticket created.");
       });
     }
@@ -492,10 +613,14 @@
     document.getElementById("modalBackdrop").addEventListener("click", event => { if (event.target.id === "modalBackdrop") closeModal(); });
     document.addEventListener("keydown", event => { if (event.key === "Escape") closeModal(); });
     document.querySelectorAll("[data-print]").forEach(button => button.addEventListener("click", () => {
-      document.getElementById("printMeta").textContent = `${button.dataset.print} - generated ${new Date().toLocaleString()}`;
+      document.getElementById("printMeta").textContent = `${button.dataset.print} - generated ${new Date().toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}`;
+      // Keep previous behaviour: open print dialog. The new Download PDF option is available under Reports.
       window.print();
     }));
+    // Ensure dashboard metrics and recent sales/time-sensitive UI update regularly using local time
     renderDashboard();
+    // Refresh dashboard every minute so dates/times reflect the current local time
+    setInterval(renderDashboard, 60000);
   </script>
 </body>
 </html>
