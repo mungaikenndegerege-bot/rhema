@@ -269,8 +269,14 @@
     </main>
   </div>
   <div class="notice" id="notice" role="status" aria-live="polite"></div>
+  <div id="rhemaDebug" style="position:fixed;left:12px;bottom:12px;z-index:9999;background:rgba(0,0,0,0.75);color:#fff;padding:8px;border-radius:8px;font-size:12px;min-width:180px;display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><strong>Debug</strong><button id="rhemaDebugToggle" style="background:transparent;border:0;color:#fff;cursor:pointer">Hide</button></div>
+    <div id="rhemaDebugContent" style="line-height:1.3"></div>
+    <div style="margin-top:8px;display:flex;gap:6px"><button id="rhemaDebugRefresh" class="btn small">Refresh</button><button id="rhemaDebugAttach" class="btn small">Attach listeners</button><button id="rhemaDebugCloseModal" class="btn small">Close modal</button></div>
+  </div>
   <div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><strong id="modalTitle"></strong><button id="closeModal" aria-label="Close">&times;</button></div><div class="modal-content" id="modalContent"></div><div class="modal-foot"><button class="btn" id="cancelModal">Cancel</button><button class="btn primary" id="saveModal">Save</button></div></div></div>
   <script>
+    try {
     const initialProducts = [
       { id: "p1", name: "USB-C fast charger 25W", sku: "CHG-025", category: "Chargers", retail: 2460, wholesale: 1620, stock: 24, reorder: 5 },
       { id: "p2", name: "Braided USB-C cable 1m", sku: "CBL-C1M", category: "Cables", retail: 1295, wholesale: 745, stock: 37, reorder: 8 },
@@ -286,6 +292,19 @@
       try { const value = localStorage.getItem(key); return value ? JSON.parse(value) : fallback; }
       catch (error) { return fallback; }
     };
+    // Global error handlers to surface JS runtime issues in the UI
+    window.addEventListener('error', event => {
+      try { notify('JavaScript error: ' + (event.message || 'Unknown error')); } catch (e) { /* ignore */ }
+      console.error('Unhandled error', event.error || event.message || event);
+      window._rhema_last_error = event.error || event.message || String(event);
+      try { document.getElementById('rhemaDebugContent')?.textContent = 'Last error: ' + (window._rhema_last_error && window._rhema_last_error.message ? window._rhema_last_error.message : String(window._rhema_last_error)); } catch (__) {}
+    });
+    window.addEventListener('unhandledrejection', event => {
+      try { notify('Unhandled promise rejection'); } catch (e) { /* ignore */ }
+      console.error('Unhandled rejection', event.reason || event);
+      window._rhema_last_error = event.reason || String(event);
+      try { document.getElementById('rhemaDebugContent')?.textContent = 'Last rejection: ' + String(window._rhema_last_error); } catch (__) {}
+    });
     const usdToKesRate = 129.556657;
     const convertUsdToKes = amount => Math.round(Number(amount) * usdToKesRate / 5) * 5;
     function migrateLegacyCurrency() {
@@ -681,10 +700,78 @@
       // Keep previous behaviour: open print dialog. The new Download PDF option is available under Reports.
       window.print();
     }));
-    // Ensure dashboard metrics and recent sales/time-sensitive UI update regularly using local time
-    renderDashboard();
-    // Refresh dashboard every minute so dates/times reflect the current local time
-    setInterval(renderDashboard, 60000);
+    // Ensure UI is initialized after DOM is ready
+    function attachEventListeners() {
+      if (window._rhema_listeners_attached) return;
+      window._rhema_listeners_attached = true;
+      try {
+        document.querySelectorAll('.nav-btn').forEach(button => button.addEventListener('click', () => {
+          if (button.dataset.screen === 'inventory') {
+            requireInventoryPin(() => showScreen('inventory'));
+          } else showScreen(button.dataset.screen);
+        }));
+      } catch (e) { console.error('nav listeners', e); }
+      try { document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', () => showScreen(button.dataset.go))); } catch (e) { console.error('data-go', e); }
+      try { document.getElementById('priceMode')?.addEventListener('click', event => {
+        const button = event.target.closest('[data-mode]'); if (!button) return; mode = button.dataset.mode; document.querySelectorAll('#priceMode button').forEach(item => item.classList.toggle('active', item === button)); renderProducts(); }); } catch (e) { console.error('priceMode', e); }
+      try { document.getElementById('productSearch')?.addEventListener('input', renderProducts); } catch (e) { console.error('productSearch', e); }
+      try { document.getElementById('inventorySearch')?.addEventListener('input', renderInventory); } catch (e) { console.error('inventorySearch', e); }
+      try { document.getElementById('clearCart')?.addEventListener('click', () => { cart = []; renderCart(); }); } catch (e) { console.error('clearCart', e); }
+      try { document.getElementById('completeSale')?.addEventListener('click', completeSale); } catch (e) { console.error('completeSale', e); }
+      try { document.getElementById('addProduct')?.addEventListener('click', () => openProductModal(null)); } catch (e) { console.error('addProduct', e); }
+      try { document.getElementById('setInventoryPin')?.addEventListener('click', openSetPinModal); } catch (e) { console.error('setInventoryPin', e); }
+      try { document.getElementById('newRepair')?.addEventListener('click', openRepairModal); } catch (e) { console.error('newRepair', e); }
+      try { document.getElementById('repairFilter')?.addEventListener('change', renderRepairs); } catch (e) { console.error('repairFilter', e); }
+      try { document.getElementById('closeModal')?.addEventListener('click', closeModal); } catch (e) { console.error('closeModal', e); }
+      try { document.getElementById('cancelModal')?.addEventListener('click', closeModal); } catch (e) { console.error('cancelModal', e); }
+      try { document.getElementById('saveModal')?.addEventListener('click', () => modalSubmit?.()); } catch (e) { console.error('saveModal', e); }
+      try { document.getElementById('modalBackdrop')?.addEventListener('click', event => { if (event.target.id === 'modalBackdrop') closeModal(); }); } catch (e) { console.error('modalBackdrop', e); }
+      try { document.addEventListener('keydown', event => { if (event.key === 'Escape') closeModal(); }); } catch (e) { console.error('keydown', e); }
+      try { document.querySelectorAll('[data-print]').forEach(button => button.addEventListener('click', () => {
+        document.getElementById('printMeta').textContent = `${button.dataset.print} - generated ${new Date().toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}`;
+        window.print();
+      })); } catch (e) { console.error('data-print', e); }
+      try {
+        document.getElementById('reportMonth')?.addEventListener('change', renderReportPreview);
+        document.getElementById('downloadExcel')?.addEventListener('click', () => { const month = document.getElementById('reportMonth').value; const report = generateMonthlyReport(month); const csv = buildCsv(report); downloadBlob(csv, `rhema-report-${month}.csv`, 'text/csv'); });
+        document.getElementById('downloadPdf')?.addEventListener('click', async () => { const month = document.getElementById('reportMonth').value; const report = generateMonthlyReport(month); await downloadReportPdf(report, month); });
+      } catch (e) { console.error('reports listeners', e); }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      try { closeModal(); } catch (e) { /* ignore */ }
+      attachEventListeners();
+      renderDashboard();
+      setInterval(renderDashboard, 60000);
+    });
+    // Debug panel functions
+    function showDebugPanel() {
+      const panel = document.getElementById('rhemaDebug'); if (!panel) return; panel.style.display = 'block'; updateDebugPanel();
+    }
+    function hideDebugPanel() { const panel = document.getElementById('rhemaDebug'); if (!panel) return; panel.style.display = 'none'; }
+    function updateDebugPanel() {
+      const content = document.getElementById('rhemaDebugContent'); if (!content) return;
+      const modal = document.getElementById('modalBackdrop');
+      const navCount = document.querySelectorAll('.nav-btn').length;
+      const listeners = !!window._rhema_listeners_attached;
+      const lastErr = window._rhema_last_error ? (window._rhema_last_error.message || String(window._rhema_last_error)) : 'none';
+      content.innerHTML = `Listeners: ${listeners}<br/>Nav buttons: ${navCount}<br/>Modal open: ${modal ? modal.classList.contains('open') : 'no modal'}<br/>Last error: ${safe(lastErr)}`;
+    }
+    // Attach debug controls
+    document.addEventListener('DOMContentLoaded', () => {
+      const toggle = document.getElementById('rhemaDebugToggle'); if (toggle) toggle.addEventListener('click', () => { const panel = document.getElementById('rhemaDebug'); panel.style.display = (panel.style.display === 'none' ? 'block' : 'none'); });
+      const refresh = document.getElementById('rhemaDebugRefresh'); if (refresh) refresh.addEventListener('click', updateDebugPanel);
+      const attachBtn = document.getElementById('rhemaDebugAttach'); if (attachBtn) attachBtn.addEventListener('click', () => { attachEventListeners(); updateDebugPanel(); notify('Listeners attached'); });
+      const closeBtn = document.getElementById('rhemaDebugCloseModal'); if (closeBtn) closeBtn.addEventListener('click', () => { closeModal(); updateDebugPanel(); notify('Modal closed'); });
+      // Show panel automatically when a JS error has occurred in this session
+      if (window._rhema_last_error) showDebugPanel();
+    });
+
+    } catch (e) {
+      // Top-level script error fallback - log and surface to user
+      console.error('Top-level script error', e);
+      try { if (typeof notify === 'function') notify('JavaScript error: ' + (e.message || e)); else alert('JavaScript error: ' + (e.message || e)); } catch (__) { /* ignore */ }
+    }
   </script>
 </body>
 </html>
