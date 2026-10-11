@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -225,7 +225,7 @@
       <div class="content">
         <div class="print-header"><h1>Rhema Mobile Technologies</h1><p id="printMeta"></p></div>
         <section class="screen active" id="screen-overview">
-          <div class="page-head"><div><div class="eyebrow">Wednesday, October 7</div><h1>Good morning, operator</h1><p class="subtitle">Here is what is happening at your counter today.</p></div><div class="head-actions"><button class="btn" data-print="Daily sales report">Print report</button><button class="btn primary" data-go="checkout">New sale</button></div></div>
+          <div class="page-head"><div><div class="eyebrow">Wednesday, October 7</div><h1 id="overviewGreeting">Good morning, operator</h1><p class="subtitle">Here is what is happening at your counter today.</p></div><div class="head-actions"><button class="btn" data-print="Daily sales report">Print report</button><button class="btn primary" data-go="checkout">New sale</button></div></div>
           <div class="metrics">
             <div class="metric"><div class="metric-label">Today's sales</div><div class="metric-value" id="metricSales">KSh 0</div><div class="metric-foot">Completed transactions</div></div>
             <div class="metric"><div class="metric-label">Items sold today</div><div class="metric-value" id="metricItems">0</div><div class="metric-foot">Across all sales</div></div>
@@ -623,13 +623,22 @@
     setInterval(renderDashboard, 60000);
   </script>
   <script>
-    // Ensure overview header shows current local date even if browser cached an old static value
+    // Update overview date and greeting based on current local time
     document.addEventListener('DOMContentLoaded', () => {
       try {
-        const el = document.querySelector('#screen-overview .eyebrow');
-        if (el) el.textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
-      } catch (e) { console.error('set overview date', e); }
+        // Date eyebrow
+        const dateEl = document.querySelector('#screen-overview .eyebrow');
+        if (dateEl) dateEl.textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+        // Time-aware greeting
+        const greetEl = document.getElementById('overviewGreeting');
+        if (greetEl) {
+          const h = new Date().getHours();
+          const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 21 ? 'Good evening' : 'Good night';
+          greetEl.textContent = greeting + ', operator';
+        }
+      } catch (e) { console.error('set overview greeting', e); }
     });
   </script>
 </body>
 </html>
+
